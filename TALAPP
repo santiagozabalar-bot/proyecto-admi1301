@@ -219,6 +219,24 @@ def reporte_tienda():
 print("Funciones listas.")
 
 
+# PARTE 3. PRUEBA RÁPIDA
+# ---- Cliente 1: Laura
+plan = recomendar_plan(peso=30, edad=9, condicion="articular")
+print("Plan recomendado para Max:", plan["nombre"])
+print(agregar_al_carrito(plan["codigo"], 1))
+print(agregar_al_carrito(8, 1))          # suplemento articular
+print()
+pagar("Laura")
+
+print("\n" + "=" * 70 + "\n")
+
+# ---- Cliente 2: Andrés
+print(agregar_al_carrito(2, 1))          # plan básico mediano
+print(agregar_al_carrito(7, 2))          # snacks dentales
+print(agregar_al_carrito(99, 1))         # código que no existe
+print(agregar_al_carrito(8, 50))         # más de lo que hay en inventario
+print()
+pagar("Andrés")
 
 
 # PARTE 4. LA TIENDA (MENÚ)
