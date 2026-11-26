@@ -217,3 +217,83 @@ def reporte_tienda():
 
 
 print("Funciones listas.")
+
+
+
+
+# PARTE 4. LA TIENDA (MENÚ)
+
+abrir_tienda = True #@param {type:"boolean"}
+
+def pedir_numero(mensaje):
+    """Repite la pregunta hasta que la persona escriba un número (acepta decimales)."""
+    while True:
+        texto = input(mensaje).strip().replace(",", ".")
+        if texto.replace(".", "", 1).isdigit():
+            return float(texto)
+        print("   Escribe solo un número.")
+
+
+def pedir_opcion(mensaje, opciones):
+    """Repite la pregunta hasta que la respuesta esté en la lista de opciones."""
+    while True:
+        respuesta = input(f"{mensaje} {opciones}: ").strip().lower()
+        if respuesta in opciones:
+            return respuesta
+        print("   Opción no válida.")
+
+
+def tienda():
+    print("Bienvenido a la tienda Talapp")
+    cliente = input("¿Cómo te llamas? ").strip() or "Cliente"
+
+    while True:
+        print("\n=== MENÚ ===")
+        print("1. Ver catálogo")
+        print("2. Recomendar un plan para mi perro")
+        print("3. Agregar un producto")
+        print("4. Ver carrito")
+        print("5. Pagar")
+        print("6. Salir")
+        opcion = input("Elige una opción (1-6): ").strip()
+
+        if opcion == "1":
+            mostrar_catalogo()
+
+        elif opcion == "2":
+            peso = pedir_numero("Peso del perro en kg: ")
+            edad = pedir_numero("Edad en años (6 meses = 0.5): ")
+            condicion = pedir_opcion("Condición médica", ["ninguna", "sobrepeso", "digestiva", "articular"])
+            plan = recomendar_plan(peso, edad, condicion)
+            print(f"\nTe recomendamos: {plan['nombre']} - {pesos(plan['precio'])}")
+            if condicion == "articular":
+                print("Sugerencia: el Suplemento articular (código 8) le puede ayudar.")
+            if pedir_opcion("¿Lo agregamos al carrito?", ["si", "no"]) == "si":
+                print(agregar_al_carrito(plan["codigo"], 1))
+
+        elif opcion == "3":
+            mostrar_catalogo()
+            codigo = int(pedir_numero("Código del producto: "))
+            cantidad = int(pedir_numero("Cantidad: "))
+            print(agregar_al_carrito(codigo, cantidad))
+
+        elif opcion == "4":
+            mostrar_carrito()
+
+        elif opcion == "5":
+            pagar(cliente)
+
+        elif opcion == "6":
+            if len(carrito) > 0:
+                print("Ojo: dejaste productos en el carrito sin pagar.")
+            print(f"¡Hasta pronto, {cliente}!")
+            break
+
+        else:
+            print("Opción no válida.")
+
+
+if abrir_tienda:
+    tienda()
+else:
+    print("Marca la casilla 'abrir_tienda' y vuelve a ejecutar esta celda para usar la tienda.")
