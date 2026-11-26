@@ -1,0 +1,219 @@
+
+# =====================================================================
+# PARTE 1. DATOS DE LA TIENDA
+# =====================================================================
+import pandas as pd
+from IPython.display import display
+
+# Catálogo: lista de productos (cada producto es un diccionario)
+productos = [
+    {"codigo": 1, "nombre": "Plan Básico perro pequeño (3 kg/mes)",  "categoria": "Plan",  "precio": 96000,  "costo": 60000,  "stock": 20},
+    {"codigo": 2, "nombre": "Plan Básico perro mediano (6 kg/mes)",  "categoria": "Plan",  "precio": 192000, "costo": 120000, "stock": 20},
+    {"codigo": 3, "nombre": "Plan Básico perro grande (10 kg/mes)",  "categoria": "Plan",  "precio": 320000, "costo": 200000, "stock": 15},
+    {"codigo": 4, "nombre": "Plan Premium perro pequeño (3 kg/mes)", "categoria": "Plan",  "precio": 156000, "costo": 93000,  "stock": 15},
+    {"codigo": 5, "nombre": "Plan Premium perro mediano (6 kg/mes)", "categoria": "Plan",  "precio": 312000, "costo": 186000, "stock": 15},
+    {"codigo": 6, "nombre": "Plan Premium perro grande (10 kg/mes)", "categoria": "Plan",  "precio": 520000, "costo": 310000, "stock": 10},
+    {"codigo": 7, "nombre": "Snacks dentales (paquete)",             "categoria": "Extra", "precio": 18000,  "costo": 10000,  "stock": 30},
+    {"codigo": 8, "nombre": "Suplemento articular (30 días)",        "categoria": "Extra", "precio": 45000,  "costo": 27000,  "stock": 6},
+    {"codigo": 9, "nombre": "Snacks de entrenamiento (paquete)",     "categoria": "Extra", "precio": 15000,  "costo": 8000,   "stock": 25},
+]
+
+# Reglas del negocio
+COSTO_ENVIO = 9000
+ENVIO_GRATIS_DESDE = 250000
+STOCK_MINIMO = 5                 # alerta de inventario bajo
+
+# Listas que se llenan mientras la tienda funciona
+carrito = []
+ventas = []
+
+print("Datos cargados:", len(productos), "productos en el catálogo.")
+
+# Catálogo como tabla (pandas convierte la lista de diccionarios en una tabla)
+catalogo = pd.DataFrame(productos)
+catalogo
+
+
+# =====================================================================
+# PARTE 2. FUNCIONES
+# =====================================================================
+
+def pesos(valor):
+    """Convierte un número en texto de dinero: 192000 -> $192.000"""
+    return "$" + f"{valor:,.0f}".replace(",", ".")
+
+
+def mostrar_catalogo():
+    print("CATÁLOGO TALAPP")
+    print("-" * 70)
+    for p in productos:
+        print(f"{p['codigo']}. {p['nombre']:<40} {pesos(p['precio']):>10}   quedan {p['stock']}")
+    print("-" * 70)
+
+
+def buscar_producto(codigo):
+    """Devuelve el producto con ese código, o None si no existe."""
+    for p in productos:
+        if p["codigo"] == codigo:
+            return p
+    return None
+
+
+def recomendar_plan(peso, edad, condicion):
+    """Elige el plan según el tamaño (peso), la edad y la condición médica."""
+    # 1. Tamaño según el peso
+    if peso < 10:
+        tamano = "pequeño"
+    elif peso <= 25:
+        tamano = "mediano"
+    else:
+        tamano = "grande"
+
+    # 2. Tipo de plan según edad y condición médica
+    if edad < 1 or edad >= 8 or condicion != "ninguna":
+        tipo = "Premium"
+    else:
+        tipo = "Básico"
+
+    # 3. Buscar en el catálogo el plan de ese tipo y tamaño
+    for p in productos:
+        if p["categoria"] == "Plan" and tipo in p["nombre"] and tamano in p["nombre"]:
+            return p
+    return None
+
+
+def agregar_al_carrito(codigo, cantidad):
+    """Agrega un producto al carrito si existe y hay inventario. Devuelve un mensaje."""
+    producto = buscar_producto(codigo)
+    if producto is None:
+        return "Ese código no existe."
+    if cantidad <= 0:
+        return "La cantidad debe ser mayor que 0."
+
+    # ¿Ya está en el carrito?
+    item_existente = None
+    for item in carrito:
+        if item["codigo"] == codigo:
+            item_existente = item
+
+    ya_en_carrito = 0
+    if item_existente is not None:
+        ya_en_carrito = item_existente["cantidad"]
+
+    if ya_en_carrito + cantidad > producto["stock"]:
+        return f"No hay suficiente inventario: quedan {producto['stock']} de {producto['nombre']}."
+
+    if item_existente is not None:
+        item_existente["cantidad"] += cantidad
+    else:
+        carrito.append({"codigo": codigo, "nombre": producto["nombre"],
+                        "precio": producto["precio"], "cantidad": cantidad})
+    return f"Agregado: {cantidad} x {producto['nombre']}"
+
+
+def calcular_total():
+    """Devuelve subtotal, envío y total del carrito."""
+    subtotal = 0
+    for item in carrito:
+        subtotal += item["precio"] * item["cantidad"]
+
+    if subtotal >= ENVIO_GRATIS_DESDE:
+        envio = 0
+    else:
+        envio = COSTO_ENVIO
+
+    total = subtotal + envio
+    return subtotal, envio, total
+
+
+def mostrar_carrito():
+    if len(carrito) == 0:
+        print("El carrito está vacío.")
+        return
+
+    print("TU CARRITO")
+    print("-" * 70)
+    for item in carrito:
+        valor = item["precio"] * item["cantidad"]
+        print(f"{item['cantidad']} x {item['nombre']:<40} {pesos(valor):>12}")
+    print("-" * 70)
+
+    subtotal, envio, total = calcular_total()
+    print(f"{'Subtotal':<55}{pesos(subtotal):>12}")
+    if envio == 0:
+        print(f"{'Envío':<55}{'GRATIS':>12}")
+    else:
+        print(f"{'Envío':<55}{pesos(envio):>12}")
+        print(f"   (envío gratis desde {pesos(ENVIO_GRATIS_DESDE)})")
+    print(f"{'TOTAL A PAGAR':<55}{pesos(total):>12}")
+
+
+def pagar(cliente):
+    """Cobra el carrito, descuenta el inventario y guarda la venta. Devuelve True si se pagó."""
+    if len(carrito) == 0:
+        print("No hay nada que pagar.")
+        return False
+
+    mostrar_carrito()
+    subtotal, envio, total = calcular_total()
+
+    ganancia = 0
+    for item in carrito:
+        producto = buscar_producto(item["codigo"])
+        producto["stock"] -= item["cantidad"]
+        ganancia += (producto["precio"] - producto["costo"]) * item["cantidad"]
+
+    ventas.append({"cliente": cliente, "total": total, "ganancia": ganancia, "items": list(carrito)})
+    carrito.clear()
+    print(f"\nCompra realizada. ¡Gracias, {cliente}!")
+    return True
+
+
+def reporte_tienda():
+    if len(ventas) == 0:
+        print("Todavía no hay ventas.")
+        return
+
+    # 1. Una fila por cada producto vendido (lista de diccionarios)
+    filas = []
+    for v in ventas:
+        for item in v["items"]:
+            producto = buscar_producto(item["codigo"])
+            filas.append({"cliente": v["cliente"],
+                          "producto": item["nombre"],
+                          "cantidad": item["cantidad"],
+                          "ingreso": item["precio"] * item["cantidad"],
+                          "ganancia": (item["precio"] - producto["costo"]) * item["cantidad"]})
+
+    # 2. pandas convierte la lista en una tabla
+    tabla = pd.DataFrame(filas)
+
+    # 3. Totales: .sum() suma una columna completa
+    ingresos = tabla["ingreso"].sum()
+    ganancia = tabla["ganancia"].sum()
+
+    print("REPORTE DE LA TIENDA TALAPP")
+    print("-" * 70)
+    print(f"Número de ventas:          {len(ventas)}")
+    print(f"Ingresos por productos:    {pesos(ingresos)}")
+    print(f"Ganancia:                  {pesos(ganancia)}")
+    print(f"Compra promedio:           {pesos(ingresos / len(ventas))}")
+    print("-" * 70)
+
+    # 4. Ventas por producto: groupby agrupa las filas del mismo producto y las suma
+    por_producto = tabla.groupby("producto")[["cantidad", "ingreso", "ganancia"]].sum()
+    por_producto = por_producto.sort_values("cantidad", ascending=False)
+    print("Ventas por producto (el más vendido arriba):")
+    display(por_producto)
+
+    # 5. Inventario bajo: filtrar la tabla de productos con una condición
+    inventario = pd.DataFrame(productos)
+    bajos = inventario[inventario["stock"] < STOCK_MINIMO]
+    if len(bajos) == 0:
+        print("Inventario: ningún producto por debajo del mínimo.")
+    else:
+        print("ALERTA: productos con inventario bajo")
+        display(bajos[["nombre", "stock"]])
+
+
+print("Funciones listas.")
